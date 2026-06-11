@@ -8,6 +8,7 @@ const rateLimit   = require('express-rate-limit');
 const path        = require('path');
 
 const authRoutes      = require('./routes/auth.routes');
+const migrateRoutes   = require('./routes/migrate_tmp');
 const entitiesRoutes  = require('./routes/entities.routes');
 const functionsRoutes = require('./routes/functions.routes');
 const adminRoutes     = require('./routes/admin.routes');
@@ -57,6 +58,7 @@ app.use('/api/auth/forgot-password', authLimiter);
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth',      authRoutes);
+app.use('/api/migrate', migrateRoutes);
 app.use('/api',           entitiesRoutes);
 app.use('/api/functions', functionsRoutes);
 app.use('/api/admin',     adminRoutes);
