@@ -1,11 +1,11 @@
 const express  = require('express');
 const router   = express.Router();
 const db       = require('../db/connection');
-const { authenticateToken } = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
 const sriSvc   = require('../services/sri_notif.service');
 
 // Todas las rutas requieren autenticación
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 
