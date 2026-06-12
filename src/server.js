@@ -12,6 +12,8 @@ const migrateRoutes   = require('./routes/migrate_full');
 const entitiesRoutes  = require('./routes/entities.routes');
 const functionsRoutes = require('./routes/functions.routes');
 const adminRoutes     = require('./routes/admin.routes');
+const sriNotifRoutes  = require('./routes/sri_notif.routes');
+const sriNotifSvc    = require('./services/sri_notif.service');
 const { startCronJobs } = require('./services/cron.service');
 
 const app  = express();
@@ -62,6 +64,7 @@ app.use('/api/migrate', migrateRoutes);
 app.use('/api',           entitiesRoutes);
 app.use('/api/functions', functionsRoutes);
 app.use('/api/admin',     adminRoutes);
+app.use('/api/sri-notif', sriNotifRoutes);
 
 // PayPhone webhook (no auth header needed — uses its own validation)
 app.post('/api/webhook/payphone', (req, res, next) => {
@@ -91,6 +94,10 @@ app.listen(PORT, () => {
   console.log(`   Entorno: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Frontend: ${process.env.FRONTEND_URL || 'http://localhost:5173'}\n`);
   startCronJobs();
+  // Crear tablas de Notificaciones SRI si no existen
+  sriNotifSvc.initAllSchedulers();
+  // (tablas se crean vía el endpoint /api/migrate en el primer deploy)
+  setTimeout(() => sriNotifSvc.initAllSchedulers(), 3000);
 });
 
 module.exports = app;

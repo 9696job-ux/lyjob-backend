@@ -192,3 +192,17 @@ module.exports = {
   sendProvidenciaAlert,
   sendAdminNewUser,
 };
+
+// Función genérica para enviar emails con HTML personalizado
+async function sendEmail({ to, subject, html, text }) {
+  return transporter.sendMail({
+    from: FROM,
+    to,
+    subject,
+    html,
+    text: text || '',
+  });
+}
+
+// Re-exportar incluyendo sendEmail
+module.exports.sendEmail = sendEmail;
