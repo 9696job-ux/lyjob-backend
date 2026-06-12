@@ -83,6 +83,21 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
+// Servir archivos del frontend para deploy
+app.get('/static/:file', (req, res) => {
+  const path = require('path');
+  const fs   = require('fs');
+  const file = req.params.file;
+  const allowed = ['index.js', 'index.css'];
+  if (!allowed.includes(file)) return res.status(404).send('Not found');
+  const filePath = path.join(__dirname, '..', 'frontend-dist', file);
+  if (!fs.existsSync(filePath)) return res.status(404).send('File not found');
+  const ext = file.endsWith('.js') ? 'application/javascript' : 'text/css';
+  res.setHeader('Content-Type', ext);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.sendFile(filePath);
+});
+
 // 404
 app.use((req, res) => {
   res.status(404).json({ error: `Ruta no encontrada: ${req.method} ${req.path}` });
