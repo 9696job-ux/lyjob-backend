@@ -1,0 +1,24 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Upload via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: yellow.hostingcolor.com
+          username: briscsco
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./frontend-dist/
+          server-dir: /lyjob.org/assets/
+          exclude: |
+            **/.git*
+            deploy.php
+            migrate*
+            *.md
