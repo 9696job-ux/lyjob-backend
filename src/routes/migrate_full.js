@@ -250,4 +250,19 @@ router.get('/status', async (req, res) => {
   res.json(counts);
 });
 
+
+// Agregar columna sri_credentials a sri_notif_config
+router.post('/add-sri-credentials', async (req, res) => {
+  try {
+    await db.query('ALTER TABLE sri_notif_config ADD COLUMN sri_credentials TEXT NULL');
+    res.json({ ok: true, msg: 'Columna sri_credentials agregada' });
+  } catch(e) {
+    if (e.message.includes('Duplicate column') || e.message.includes('already exists')) {
+      res.json({ ok: true, msg: 'Columna ya existía' });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
+});
+
 module.exports = router;

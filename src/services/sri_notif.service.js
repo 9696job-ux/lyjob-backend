@@ -421,6 +421,14 @@ async function initAllSchedulers() {
     try { await db.query(sql); } catch(e) { /* ya existe */ }
   }
   
+  // Agregar columna sri_credentials si no existe
+  try {
+    await db.query('ALTER TABLE sri_notif_config ADD COLUMN sri_credentials TEXT NULL');
+    console.log('✅ Columna sri_credentials agregada');
+  } catch(e) {
+    if (!e.message.includes('Duplicate column')) console.log('ℹ️  sri_credentials:', e.message.substring(0,50));
+  }
+  
   try {
     const [configs] = await db.query(
       'SELECT * FROM sri_notif_config WHERE activo = 1'
