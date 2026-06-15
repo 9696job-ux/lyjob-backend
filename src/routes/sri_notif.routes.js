@@ -4,6 +4,13 @@ const db       = require('../db/connection');
 const auth     = require('../middleware/auth');
 const sriSvc   = require('../services/sri_notif.service');
 const crypto   = require('crypto');
+// Helper: mysql2 puede devolver columnas JSON ya parseadas (array/object) o como string
+function safeJsonParse(val, fallback) {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'object') return val; // ya parseado por el driver
+  try { return JSON.parse(val); } catch(e) { return fallback; }
+}
+
 
 router.use(auth);
 
@@ -184,7 +191,7 @@ router.post('/push-notificaciones', async (req, res) => {
         'SELECT * FROM sri_notif_config WHERE organization_id=?', [org_id]
       );
       if (config) {
-        const emails = JSON.parse(config.emails_notificacion || '[]');
+        const emails = safeJsonParse(config.emails_notificacion, []);
         if (emails.length > 0) {
           sriSvc.enviarEmailNotificacion(emails[0], [{
             cliente: razon_social || ruc, ruc,
@@ -272,7 +279,8 @@ router.post('/obtener-credenciales', async (req, res) => {
       return res.status(404).json({ error: 'No hay credenciales SRI configuradas' });
     }
     
-    const creds = JSON.parse(config.sri_credentials);
+    const creds = safeJsonParse(config.sri_credentials, null);
+    if (!creds) return res.status(404).json({ error: 'No hay credenciales SRI configuradas' });
     res.json({
       credenciales: {
         usuario: creds.usuario,

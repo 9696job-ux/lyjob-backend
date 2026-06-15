@@ -10,6 +10,13 @@ const crypto   = require('crypto');
 const https    = require('https');
 const cron     = require('node-cron');
 
+// Helper: mysql2 puede devolver columnas JSON ya parseadas (array/object) o como string
+function safeJsonParse(val, fallback) {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === "object") return val;
+  try { return JSON.parse(val); } catch(e) { return fallback; }
+}
+
 // Almacén de jobs activos { org_id: [cronJob, cronJob, ...] }
 const activeJobs = {};
 
@@ -220,7 +227,7 @@ async function revisarNotificaciones(org_id, test_email = null) {
     if (notificacionesNuevas > 0) {
       const emails = test_email
         ? [test_email]
-        : (config ? JSON.parse(config.emails_notificacion || '[]') : []);
+        : (config ? safeJsonParse(config.emails_notificacion, []) : []);
 
       if (emails.length > 0) {
         for (const email of emails) {
@@ -454,7 +461,7 @@ function updateSchedule(org_id, config) {
 
   if (!config || !config.activo) return;
 
-  const horarios = JSON.parse(config.horarios || '["08:35","12:00","17:00"]');
+  const horarios = safeJsonParse(config.horarios, ['08:35','12:00','17:00']);
   const jobs = [];
 
   for (const hora of horarios) {
