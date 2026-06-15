@@ -95,7 +95,7 @@ router.get('/clientes', async (req, res) => {
   try {
     const org_id = req.user.organization_id;
     const [rows] = await db.query(
-      'SELECT * FROM sri_notif_clientes WHERE organization_id=? ORDER BY razon_social', [org_id]
+      'SELECT id, organization_id, client_id, ruc, razon_social, activo, created_at, sri_usuario, (sri_clave IS NOT NULL) AS tiene_credenciales FROM sri_notif_clientes WHERE organization_id=? ORDER BY razon_social', [org_id]
     );
     res.json({ clientes: rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -120,6 +120,38 @@ router.delete('/clientes/:client_id', async (req, res) => {
     const org_id = req.user.organization_id;
     await db.query(
       'UPDATE sri_notif_clientes SET activo=0 WHERE organization_id=? AND client_id=?',
+      [org_id, req.params.client_id]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Guardar/actualizar credenciales SRI propias de un cliente
+router.post('/clientes/:client_id/credenciales', async (req, res) => {
+  try {
+    const org_id = req.user.organization_id;
+    const { sri_usuario, sri_clave } = req.body;
+    if (!sri_usuario || !sri_clave) {
+      return res.status(400).json({ error: 'sri_usuario y sri_clave son requeridos' });
+    }
+    const claveCifrada = Buffer.from(sri_clave).toString('base64');
+    const [result] = await db.query(
+      'UPDATE sri_notif_clientes SET sri_usuario=?, sri_clave=? WHERE organization_id=? AND client_id=?',
+      [sri_usuario, claveCifrada, org_id, req.params.client_id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado en revisión' });
+    }
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Eliminar credenciales SRI de un cliente
+router.delete('/clientes/:client_id/credenciales', async (req, res) => {
+  try {
+    const org_id = req.user.organization_id;
+    await db.query(
+      'UPDATE sri_notif_clientes SET sri_usuario=NULL, sri_clave=NULL WHERE organization_id=? AND client_id=?',
       [org_id, req.params.client_id]
     );
     res.json({ ok: true });
