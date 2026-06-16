@@ -150,10 +150,23 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     console.log(`    ✅ Login exitoso`);
 
     // Esperar que el SPA Angular inicialice la sesión completamente
-    // Navegamos al portal principal primero para que establezca las cookies de sesión
     console.log(`    → Inicializando sesión en portal SRI...`);
     await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 4000));
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Navegar a la sección de Trámites via el portal para establecer la sesión JSF
+    // El portal SRI tiene un iframe/redirect al sistema JSF cuando se navega al menú
+    console.log(`    → Navegando al menú Trámites y Notificaciones...`);
+    const tramitesUrl = `${BASE_URL}/tuportal-internet/opciones.jsf`;
+    await page.goto(tramitesUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Verificar si estamos en el portal JSF autenticado
+    const portalHtml = await page.content();
+    const portalUrl = page.url();
+    console.log(`    → Portal URL: ${portalUrl.substring(0,80)}`);
+    const enPortal = portalHtml.includes('Tr') && !portalHtml.includes('kc-form-login');
+    console.log(`    → En portal autenticado: ${enPortal}`);
 
     // Navegar a Documentos notificados electrónicamente
     console.log(`    → Navegando a documentos notificados...`);
@@ -170,7 +183,9 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
 
     const html = await page.content();
     
-    if (html.includes('Iniciar sesi') || html.includes('kc-form-login')) {
+    // Verificar sesión: si hay form de login real (no solo el texto del menú del portal)
+    const hayFormLogin = html.includes('<form') && (html.includes('kc-form-login') || html.includes('id="password"'));
+    if (hayFormLogin) {
       return { ok: false, error: 'Sesión perdida al navegar a notificaciones', superior: [], inferior: [] };
     }
     
