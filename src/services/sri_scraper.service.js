@@ -76,9 +76,12 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const PASS_SELECTOR  = 'input[name="password"], #password, input[name="clave"], #clave, input[type="password"]';
     const BTN_SELECTOR   = 'button[type="submit"], input[type="submit"], #kc-login, .pf-c-button[type="submit"]';
 
+    // URL real que usa el portal SRI (capturada de las network requests del browser)
+    // client_id=app-sri-claves-angular (NO app-portal-internet)
     const kcUrl = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
-      `?client_id=app-portal-internet` +
-      `&redirect_uri=${encodeURIComponent(BASE_URL + '/sri-en-linea/')}` +
+      `?client_id=app-sri-claves-angular` +
+      `&redirect_uri=${encodeURIComponent(BASE_URL + '/sri-en-linea/acceso/identificacion')}` +
+      `&response_mode=fragment` +
       `&response_type=code&scope=openid&prompt=login`;
 
     console.log(`    → Navegando a login Keycloak del SRI...`);
