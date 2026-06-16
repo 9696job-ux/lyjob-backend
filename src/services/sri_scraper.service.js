@@ -123,23 +123,38 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
       page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
       submitBtn.click(),
     ]);
-    // Esperar un poco más para asegurar que la sesión se establece
-    await new Promise(r => setTimeout(r, 2000));
+    // Esperar que Angular complete el auth code exchange (procesa el #code en el fragment)
+    // El redirect lleva a /acceso/identificacion#code=xxx&session_state=xxx
+    // Angular hace el token exchange y luego redirige al portal autenticado
+    console.log(`    → Esperando que Angular complete el auth exchange...`);
+    await new Promise(r => setTimeout(r, 4000));
 
-    // Verificar login exitoso
-    const currentUrl = page.url();
-    const pageContent = await page.content();
+    // Verificar si hubo error de credenciales
+    const loginCheckContent = await page.content();
+    const loginCheckUrl = page.url();
+    console.log(`    → URL post-login: ${loginCheckUrl.substring(0, 80)}`);
     
-    if (pageContent.includes('Clave incorrecta') || pageContent.includes('Invalid credentials') || pageContent.includes('nombre de usuario incorrecto')) {
+    if (loginCheckContent.includes('Clave incorrecta') || loginCheckContent.includes('Invalid credentials') || loginCheckContent.includes('nombre de usuario incorrecto')) {
       return { ok: false, error: 'Credenciales SRI incorrectas', superior: [], inferior: [] };
     }
+    
+    // Si sigue en la página de login (error de creds), fallar
+    if (loginCheckUrl.includes('realms/Internet') && !loginCheckUrl.includes('#')) {
+      return { ok: false, error: 'Login falló - sigue en Keycloak', superior: [], inferior: [] };
+    }
 
-    console.log(`    ✅ Login exitoso, URL: ${currentUrl.substring(0, 80)}`);
+    console.log(`    ✅ Login exitoso`);
+
+    // Esperar que el SPA Angular inicialice la sesión completamente
+    // Navegamos al portal principal primero para que establezca las cookies de sesión
+    console.log(`    → Inicializando sesión en portal SRI...`);
+    await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await new Promise(r => setTimeout(r, 4000));
 
     // Navegar a Documentos notificados electrónicamente
     console.log(`    → Navegando a documentos notificados...`);
     await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 5000)); // esperar que JSF cargue la tabla
+    await new Promise(r => setTimeout(r, 6000)); // JSF necesita tiempo para cargar la tabla
 
     // Esperar que cargue la tabla
     try {
