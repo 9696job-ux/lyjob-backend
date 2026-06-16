@@ -103,21 +103,41 @@ async function seguirRedirects(url, cookies = {}, maxRedirects = 10) {
 async function loginSRI(ruc, clave) {
   let cookies = {};
 
-  // PASO 1: Ir a la página principal del SRI → redirige a Keycloak
-  console.log(`    → GET ${LOGIN_URL}`);
-  const resp1 = await seguirRedirects(LOGIN_URL, cookies);
-  cookies = resp1.cookies;
-  const loginPageUrl = resp1.finalUrl;
-  const loginHtml = resp1.data || '';
+  // PASO 1: Ir a la URL directa del auth de Keycloak
+  // (más confiable que pasar por el portal que puede tener redirects variables)
+  const keycloakAuthUrl = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
+    `?client_id=app-portal-internet` +
+    `&redirect_uri=${encodeURIComponent(BASE_URL + '/sri-en-linea/')}` +
+    `&response_type=code&scope=openid`;
+
+  console.log(`    → GET Keycloak auth URL`);
+  const resp0 = await seguirRedirects(keycloakAuthUrl, cookies);
+  cookies = resp0.cookies;
+  let loginPageUrl = resp0.finalUrl;
+  let loginHtml = resp0.data || '';
+  
+  // Si la URL directa de Keycloak no devuelve el form, probar via el portal
+  let $ = cheerio.load(loginHtml);
+  let formAction = $('form#kc-form-login').attr('action') || '';
+  
+  if (!formAction) {
+    // Intentar via el portal principal
+    console.log(`    → Keycloak directo no retornó form, probando via portal...`);
+    const respPortal = await seguirRedirects(LOGIN_URL, cookies);
+    cookies = respPortal.cookies;
+    loginPageUrl = respPortal.finalUrl;
+    loginHtml = respPortal.data || '';
+    $ = cheerio.load(loginHtml);
+    formAction = $('form#kc-form-login').attr('action') || $('form[action*="login-actions"]').attr('action') || '';
+  }
 
   console.log(`    → Login page: ${loginPageUrl.substring(0, 80)}`);
+  console.log(`    → formAction encontrado: ${formAction ? 'SÍ' : 'NO'} (${formAction.substring(0, 60)})`);
 
-  // PASO 2: Extraer el action del form de Keycloak
-  const $ = cheerio.load(loginHtml);
-  let formAction = $('form#kc-form-login').attr('action') || $('form').first().attr('action') || '';
-
+  // PASO 2: Verificar que tenemos el form
   if (!formAction) {
-    // Si no hay form, la página podría ser el portal (ya autenticado) - error
+    // Debug: ver qué HTML llegó
+    console.log(`    ⚠️  HTML recibido (500 chars): ${loginHtml.replace(/\s+/g,' ').substring(0, 500)}`);
     return { ok: false, error: 'No se encontró el form de login del SRI', cookies };
   }
 
