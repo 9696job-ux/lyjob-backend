@@ -69,7 +69,7 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     // Ir al portal del SRI
     console.log(`    → Navegando al portal SRI...`);
     await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(3000); // dar tiempo al JS de la SPA
+    await new Promise(r => setTimeout(r, 3000)); // dar tiempo al JS de la SPA
 
     // Hacer clic en "Iniciar sesión" o navegar al login
     console.log(`    → Esperando form de login...`);
@@ -130,7 +130,7 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
       submitBtn.click(),
     ]);
     // Esperar un poco más para asegurar que la sesión se establece
-    await page.waitForTimeout(2000);
+    await new Promise(r => setTimeout(r, 2000));
 
     // Verificar login exitoso
     const currentUrl = page.url();
@@ -145,14 +145,14 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     // Navegar a Documentos notificados electrónicamente
     console.log(`    → Navegando a documentos notificados...`);
     await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(5000); // esperar que JSF cargue la tabla
+    await new Promise(r => setTimeout(r, 5000)); // esperar que JSF cargue la tabla
 
     // Esperar que cargue la tabla
     try {
       await page.waitForSelector('table', { timeout: 20000 });
     } catch(e) {
       console.log(`    ⚠️  Tabla no encontrada, esperando más...`);
-      await page.waitForTimeout(5000);
+      await new Promise(r => setTimeout(r, 5000));
     }
 
     const html = await page.content();
