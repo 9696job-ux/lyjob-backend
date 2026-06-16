@@ -173,6 +173,14 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     if (html.includes('Iniciar sesi') || html.includes('kc-form-login')) {
       return { ok: false, error: 'Sesión perdida al navegar a notificaciones', superior: [], inferior: [] };
     }
+    
+    // Debug: reportar si la página tiene contenido de notificaciones
+    const hasTable = html.includes('<table');
+    const hasNotif = html.includes('Consulta de Documentos') || html.includes('materializacion') || html.includes('notificad');
+    console.log(`    → Página notif: hasTable=${hasTable} hasNotif=${hasNotif} url=${page.url().substring(0,60)}`);
+    if (!hasTable) {
+      console.log(`    ⚠️  HTML snippet: ${html.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').substring(0,300)}`);
+    }
 
     // Parsear las tablas
     const docs = await page.evaluate(() => {
