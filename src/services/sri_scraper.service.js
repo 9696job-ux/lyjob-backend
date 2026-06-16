@@ -154,19 +154,45 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await new Promise(r => setTimeout(r, 5000));
 
-    // Navegar a la sección de Trámites via el portal para establecer la sesión JSF
-    // El portal SRI tiene un iframe/redirect al sistema JSF cuando se navega al menú
-    console.log(`    → Navegando al menú Trámites y Notificaciones...`);
-    const tramitesUrl = `${BASE_URL}/tuportal-internet/opciones.jsf`;
-    await page.goto(tramitesUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000));
-
-    // Verificar si estamos en el portal JSF autenticado
-    const portalHtml = await page.content();
-    const portalUrl = page.url();
-    console.log(`    → Portal URL: ${portalUrl.substring(0,80)}`);
-    const enPortal = portalHtml.includes('Tr') && !portalHtml.includes('kc-form-login');
-    console.log(`    → En portal autenticado: ${enPortal}`);
+    // El portal JSF del SRI tiene su propio sistema de login separado del Angular SPA.
+    // Hacemos login también en el portal JSF/clásico usando la misma URL de login de Keycloak
+    // pero con el client_id del portal JSF: tuportal-internet
+    console.log(`    → Haciendo login en portal JSF clásico del SRI...`);
+    const kcUrlJSF = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
+      `?client_id=tuportal-internet` +
+      `&redirect_uri=${encodeURIComponent(BASE_URL + '/tuportal-internet/')}` +
+      `&response_type=code&scope=openid&prompt=login`;
+    
+    await page.goto(kcUrlJSF, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Verificar si nos pide login de nuevo (por sesión Keycloak activa, puede auto-login)
+    const jsfLoginHtml = await page.content();
+    const jsfLoginUrl = page.url();
+    console.log(`    → JSF login URL: ${jsfLoginUrl.substring(0,80)}`);
+    
+    if (jsfLoginHtml.includes('id="username"') || jsfLoginHtml.includes('name="username"')) {
+      // Necesita login manual otra vez
+      console.log(`    → Ingresando credenciales en portal JSF...`);
+      const u2 = await page.$('input[name="username"], #username');
+      const p2 = await page.$('input[type="password"]');
+      const b2 = await page.$('button[type="submit"], #kc-login');
+      if (u2) await u2.type(ruc, { delay: 30 });
+      if (p2) await p2.type(clave, { delay: 30 });
+      if (b2) {
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+          b2.click()
+        ]);
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    } else {
+      // Keycloak auto-loggeó via SSO — esperar redirect
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    
+    const jsfPortalUrl = page.url();
+    console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
 
     // Navegar a Documentos notificados electrónicamente
     console.log(`    → Navegando a documentos notificados...`);
