@@ -34,7 +34,11 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--ignore-certificate-errors',
-      '--single-process',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
+      '--window-size=1280,800',
+      '--start-maximized',
+      '--lang=es-EC',
     ];
     
     console.log(`    → Chromium path: ${execPath}`);
