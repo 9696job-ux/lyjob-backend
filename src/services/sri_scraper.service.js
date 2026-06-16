@@ -50,6 +50,22 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     await page.setDefaultNavigationTimeout(60000);
     await page.setDefaultTimeout(45000);
 
+    // Anti-detección headless: ocultar que es Puppeteer
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'es-EC,es;q=0.9,en;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    });
+    // Eliminar propiedades que delatan que es headless
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['es-EC', 'es'] });
+      window.chrome = { runtime: {} };
+    });
+
     // Ir al portal del SRI
     console.log(`    → Navegando al portal SRI...`);
     await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
