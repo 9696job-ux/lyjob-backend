@@ -265,4 +265,22 @@ router.post('/add-sri-credentials', async (req, res) => {
   }
 });
 
+// Actualizar index.html en lyjob.org ejecutando el deploy.php actualizado
+router.post('/patch-frontend', async (req, res) => {
+  try {
+    const https = require('https');
+    const deployUrl = 'https://lyjob.org/deploy.php?t=lyjob_deploy_2026';
+    const deployResult = await new Promise((resolve, reject) => {
+      https.get(deployUrl, (r) => {
+        let data = '';
+        r.on('data', d => data += d);
+        r.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { resolve({raw:data.substring(0,200)}); } });
+      }).on('error', reject);
+    });
+    res.json({ ok: true, deploy: deployResult });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
