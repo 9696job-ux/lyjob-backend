@@ -4,7 +4,8 @@
  */
 
 const puppeteer = require('puppeteer-core');
-const chromium  = require('@sparticuz/chromium');
+const chromiumPkg = require('@sparticuz/chromium');
+const chromium = chromiumPkg.default || chromiumPkg;
 
 const BASE_URL  = 'https://srienlinea.sri.gob.ec';
 const NOTIF_URL = `${BASE_URL}/gestion-documentos-internet/pages/materializacion.xhtml` +
