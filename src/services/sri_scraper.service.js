@@ -47,12 +47,13 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     });
 
     const page = await browser.newPage();
-    await page.setDefaultNavigationTimeout(45000);
-    await page.setDefaultTimeout(30000);
+    await page.setDefaultNavigationTimeout(60000);
+    await page.setDefaultTimeout(45000);
 
     // Ir al portal del SRI
     console.log(`    → Navegando al portal SRI...`);
-    await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'networkidle2' });
+    await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(3000); // dar tiempo al JS de la SPA
 
     // Hacer clic en "Iniciar sesión" o navegar al login
     console.log(`    → Esperando form de login...`);
@@ -84,7 +85,7 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
         `?client_id=app-portal-internet` +
         `&redirect_uri=${encodeURIComponent(BASE_URL + '/sri-en-linea/')}` +
         `&response_type=code&scope=openid&prompt=login`;
-      await page.goto(kcUrl, { waitUntil: 'networkidle2' });
+      await page.goto(kcUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await page.waitForSelector(LOGIN_SELECTOR, { timeout: 15000 });
     }
 
@@ -109,7 +110,7 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
       return { ok: false, error: 'No se encontró botón de login', superior: [], inferior: [] };
     }
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 35000 }).catch(() => {}),
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
       submitBtn.click(),
     ]);
     // Esperar un poco más para asegurar que la sesión se establece
@@ -127,7 +128,8 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
 
     // Navegar a Documentos notificados electrónicamente
     console.log(`    → Navegando a documentos notificados...`);
-    await page.goto(NOTIF_URL, { waitUntil: 'networkidle2', timeout: 45000 });
+    await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(5000); // esperar que JSF cargue la tabla
 
     // Esperar que cargue la tabla
     try {
