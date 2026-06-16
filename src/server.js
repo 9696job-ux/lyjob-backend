@@ -109,10 +109,9 @@ app.listen(PORT, () => {
   console.log(`   Entorno: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Frontend: ${process.env.FRONTEND_URL || 'http://localhost:5173'}\n`);
   startCronJobs();
-  // Crear tablas de Notificaciones SRI si no existen
-  sriNotifSvc.initAllSchedulers();
-  // (tablas se crean vía el endpoint /api/migrate en el primer deploy)
-  setTimeout(() => sriNotifSvc.initAllSchedulers(), 3000);
+  // Crear tablas y activar schedulers de Notificaciones SRI
+  // Usamos un pequeño delay para dar tiempo a que la DB esté lista
+  setTimeout(() => sriNotifSvc.initAllSchedulers(), 2000);
 });
 
 module.exports = app;
