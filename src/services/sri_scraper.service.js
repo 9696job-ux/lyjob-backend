@@ -66,10 +66,7 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
       window.chrome = { runtime: {} };
     });
 
-    // Ir al portal del SRI
-    console.log(`    → Navegando al portal SRI...`);
-    await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000)); // dar tiempo al JS de la SPA
+    // Ir directo a Keycloak (ver abajo)de la SPA
 
     // Hacer clic en "Iniciar sesión" o navegar al login
     console.log(`    → Esperando form de login...`);
