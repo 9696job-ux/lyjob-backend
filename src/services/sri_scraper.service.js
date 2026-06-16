@@ -20,18 +20,29 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
 
   let browser;
   try {
+    // @sparticuz/chromium puede tener args como función o array
+    const chromiumArgs = typeof chromium.args === 'function' ? chromium.args() : (chromium.args || []);
+    const execPath = typeof chromium.executablePath === 'function' 
+      ? await chromium.executablePath() 
+      : chromium.executablePath;
+    
+    const launchArgs = [
+      ...(Array.isArray(chromiumArgs) ? chromiumArgs : []),
+      '--no-sandbox',
+      '--disable-setuid-sandbox', 
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--ignore-certificate-errors',
+      '--single-process',
+    ];
+    
+    console.log(`    → Chromium path: ${execPath}`);
+    
     browser = await puppeteer.launch({
-      args: [
-        ...chromium.args,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--ignore-certificate-errors',
-      ],
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      args: launchArgs,
+      defaultViewport: { width: 1280, height: 800 },
+      executablePath: execPath,
+      headless: true,
     });
 
     const page = await browser.newPage();
