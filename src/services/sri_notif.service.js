@@ -7,6 +7,7 @@
 const db       = require('../db/connection');
 const emailSvc = require('./email.service');
 const crypto   = require('crypto');
+const { scrapearNotificacionesSRI } = require('./sri_scraper.service');
 const https    = require('https');
 const cron     = require('node-cron');
 
@@ -111,8 +112,8 @@ async function procesarNotificaciones(org_id, client_id, ruc, razon_social, noti
   for (const notif of (notificaciones || [])) {
     const numero  = notif.numeroTramite || notif.numero || notif.id || '';
     const fecha   = notif.fechaNotificacion || notif.fecha || '';
-    const asunto  = notif.asunto || notif.descripcion || notif.tipo || '';
-    const remitente = notif.remitente || notif.entidadOrigen || 'SRI';
+    const asunto  = notif.asunto || notif.descripcion || notif.tipo || notif.tipo_documento || '';
+    const remitente = notif.remitente || notif.entidadOrigen || notif.aplicacion || 'SRI Ecuador';
     const desc    = notif.descripcion || notif.detalle || asunto;
 
     const hash = generarHash(ruc, seccion, numero, fecha, asunto);
@@ -173,31 +174,47 @@ async function revisarNotificaciones(org_id, test_email = null) {
       clientesRevisados++;
       console.log(`  📋 Revisando RUC: ${cliente.ruc} - ${cliente.razon_social}`);
 
-      // Consultar SRI
-      const [resV1, resV2] = await Promise.all([
-        consultarSRI(cliente.ruc),
-        consultarSRIv2(cliente.ruc)
-      ]);
+      // Usar credenciales del cliente si tiene, sino las de la organización
+      let sriUsuario = cliente.sri_usuario;
+      let sriClaveB64 = cliente.sri_clave;
 
-      console.log(`    SRI v1: ${resV1.ok ? 'OK' : resV1.error} | v2: ${resV2.ok ? `OK status=${resV2.status}` : resV2.error}`);
-
-      // Procesar respuesta - adaptarse a la estructura del SRI
-      let notifSuperiores = [], notifInferiores = [];
-
-      // Intentar extraer de v1
-      if (resV1.ok && resV1.data) {
-        const d = resV1.data;
-        notifSuperiores = d.notificacionesSuperiores || d.superior || d.notificaciones || d.data || [];
-        notifInferiores = d.notificacionesInferiores || d.inferior || [];
-        if (Array.isArray(d)) { notifSuperiores = d; }
+      // Fallback a credenciales de la organización
+      if (!sriClaveB64 && config) {
+        const orgCreds = safeJsonParse(config.sri_credentials, null);
+        if (orgCreds) {
+          sriUsuario = orgCreds.usuario;
+          sriClaveB64 = orgCreds.clave; // ya en base64
+        }
       }
 
-      // Intentar extraer de v2
-      if (resV2.ok && resV2.data) {
-        const d = resV2.data;
-        if (d.notificacionesSuperiores) notifSuperiores = [...notifSuperiores, ...d.notificacionesSuperiores];
-        if (d.notificacionesInferiores) notifInferiores = [...notifInferiores, ...d.notificacionesInferiores];
-        if (Array.isArray(d) && !notifSuperiores.length) notifSuperiores = d;
+      if (!sriUsuario || !sriClaveB64) {
+        console.log(`    ⚠️  Sin credenciales SRI para ${cliente.ruc}, saltando`);
+        continue;
+      }
+
+      // Scraper real: login en SRI y extraer "Documentos notificados electrónicamente"
+      const resScraper = await scrapearNotificacionesSRI(sriUsuario, sriClaveB64);
+
+      console.log(`    Scraper: ${resScraper.ok ? 'OK' : resScraper.error}`);
+
+      let notifSuperiores = [], notifInferiores = [];
+
+      if (resScraper.ok) {
+        // Mapear los documentos del SRI real al formato interno
+        notifSuperiores = (resScraper.superior || []).map(d => ({
+          numeroTramite: d.numero,
+          fecha:         d.fecha,
+          asunto:        d.tipo_documento,
+          descripcion:   `${d.tipo_documento} - ${d.aplicacion} - ${d.oficina}`.trim().replace(/^-|-$/g, '').trim(),
+          remitente:     d.aplicacion || 'SRI Ecuador',
+        }));
+        notifInferiores = (resScraper.inferior || []).map(d => ({
+          numeroTramite: d.numero,
+          fecha:         d.fecha,
+          asunto:        d.tipo_documento,
+          descripcion:   `${d.tipo_documento} - ${d.aplicacion} - ${d.oficina}`.trim().replace(/^-|-$/g, '').trim(),
+          remitente:     d.aplicacion || 'SRI Ecuador',
+        }));
       }
 
       const nuevasTop = await procesarNotificaciones(
