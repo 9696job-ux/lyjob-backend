@@ -10,7 +10,9 @@
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^149.0.0",
     "axios": "^1.17.0",
+    "axios-cookiejar-support": "^7.0.0",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.2.0",
     "compression": "^1.7.4",
@@ -26,6 +28,8 @@
     "mysql2": "^3.9.7",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13",
+    "puppeteer-core": "^25.1.0",
+    "tough-cookie": "^6.0.1",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
