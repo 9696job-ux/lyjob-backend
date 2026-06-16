@@ -73,36 +73,30 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
 
     // Hacer clic en "Iniciar sesión" o navegar al login
     console.log(`    → Esperando form de login...`);
-    // Selector universal para el form de login del SRI (portal clásico o Keycloak)
+    // Ir directo a la URL de Keycloak que tiene el form HTML estático
+    // (el portal SRI es una SPA Angular — no tiene form HTML sin ejecutar JS)
     const LOGIN_SELECTOR = 'input[name="username"], #username, input[name="identificacion"], #identificacion';
     const PASS_SELECTOR  = 'input[name="password"], #password, input[name="clave"], #clave, input[type="password"]';
     const BTN_SELECTOR   = 'button[type="submit"], input[type="submit"], #kc-login, .pf-c-button[type="submit"]';
 
-    let formFound = false;
-    try {
-      await page.waitForSelector(LOGIN_SELECTOR, { timeout: 10000 });
-      formFound = true;
-    } catch(e) {
-      // La SPA puede necesitar tiempo para cargar el form de login
-      // Buscar y hacer clic en el botón "Iniciar sesión"
-      try {
-        const loginBtn = await page.$('a[href*="login"], button:has-text("Iniciar"), .iniciar-sesion');
-        if (loginBtn) {
-          await loginBtn.click();
-          await page.waitForSelector(LOGIN_SELECTOR, { timeout: 10000 });
-          formFound = true;
-        }
-      } catch(e2) {}
-    }
+    const kcUrl = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
+      `?client_id=app-portal-internet` +
+      `&redirect_uri=${encodeURIComponent(BASE_URL + '/sri-en-linea/')}` +
+      `&response_type=code&scope=openid&prompt=login`;
 
-    if (!formFound) {
-      // Último recurso: ir directamente a Keycloak con los parámetros del SRI
-      const kcUrl = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
-        `?client_id=app-portal-internet` +
-        `&redirect_uri=${encodeURIComponent(BASE_URL + '/sri-en-linea/')}` +
-        `&response_type=code&scope=openid&prompt=login`;
-      await page.goto(kcUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.waitForSelector(LOGIN_SELECTOR, { timeout: 15000 });
+    console.log(`    → Navegando a login Keycloak del SRI...`);
+    await page.goto(kcUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+    console.log(`    → Esperando form de login...`);
+    try {
+      await page.waitForSelector(LOGIN_SELECTOR, { timeout: 20000 });
+    } catch(e) {
+      // Ver qué URL tenemos y qué HTML
+      const url = page.url();
+      const html = await page.content();
+      console.log(`    ⚠️ Form no encontrado. URL: ${url.substring(0,80)}`);
+      console.log(`    ⚠️ HTML: ${html.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').substring(0,200)}`);
+      return { ok: false, error: 'No se encontró el form de login del SRI', superior: [], inferior: [] };
     }
 
     // Llenar formulario de login
