@@ -19,6 +19,16 @@ foreach (['index.js', 'index.css'] as $f) {
   $results[$f] = "OK " . strlen($c) . " bytes";
 }
 
+// Auto-actualizar el deploy.php con la versión de GitHub
+$deployPhp = curl_init("$base/deploy.php");
+curl_setopt_array($deployPhp, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>30,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_SSL_VERIFYPEER=>false]);
+$newDeploy = curl_exec($deployPhp);
+curl_close($deployPhp);
+if ($newDeploy && strlen($newDeploy) > 100) {
+  file_put_contents(__FILE__, $newDeploy);
+  $results['deploy.php'] = "OK self-updated";
+}
+
 // Actualizar index.html con nuevo timestamp (forza al browser a recargar el JS)
 $html = '<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Lyjob - Sistema Tributario Ecuador</title><script type="module" crossorigin src="/assets/index.js?v=' . $ts . '"></script><link rel="stylesheet" crossorigin href="/assets/index.css?v=' . $ts . '"></head><body><div id="root"></div></body></html>';
 $ok = file_put_contents(__DIR__ . '/index.html', $html);

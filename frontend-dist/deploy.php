@@ -1,27 +1,28 @@
 <?php
-// Script de auto-deploy - descarga el index.js de GitHub y lo guarda localmente
 $token = $_GET['t'] ?? '';
-if ($token !== 'lyjob_deploy_2026') {
-    http_response_code(403);
-    die('Forbidden');
-}
+if ($token !== 'lyjob_deploy_2026') { http_response_code(403); die('Forbidden'); }
 
-$files = [
-    'index.js'  => 'https://raw.githubusercontent.com/9696job-ux/lyjob-backend/main/frontend-dist/index.js',
-    'index.css' => 'https://raw.githubusercontent.com/9696job-ux/lyjob-backend/main/frontend-dist/index.css',
-];
-
+$base = 'https://raw.githubusercontent.com/9696job-ux/lyjob-backend/main/frontend-dist';
+$assetsDir = __DIR__ . '/assets/';
 $results = [];
-foreach ($files as $filename => $url) {
-    $content = file_get_contents($url);
-    if ($content === false) {
-        $results[$filename] = 'ERROR: no se pudo descargar';
-        continue;
-    }
-    $path = __DIR__ . '/assets/' . $filename;
-    $ok = file_put_contents($path, $content);
-    $results[$filename] = $ok !== false ? "OK ({$ok} bytes)" : 'ERROR: no se pudo escribir';
+$ts = time();
+
+// Descargar index.js e index.css
+foreach (['index.js', 'index.css'] as $f) {
+  $ch = curl_init("$base/$f");
+  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>120,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_SSL_VERIFYPEER=>false,CURLOPT_USERAGENT=>'Mozilla/5.0']);
+  $c = curl_exec($ch);
+  $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+  if (!$c || $code !== 200 || strlen($c) < 5000) { $results[$f] = "ERROR code=$code"; continue; }
+  file_put_contents($assetsDir . $f, $c);
+  $results[$f] = "OK " . strlen($c) . " bytes";
 }
+
+// Actualizar index.html con nuevo timestamp (forza al browser a recargar el JS)
+$html = '<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Lyjob - Sistema Tributario Ecuador</title><script type="module" crossorigin src="/assets/index.js?v=' . $ts . '"></script><link rel="stylesheet" crossorigin href="/assets/index.css?v=' . $ts . '"></head><body><div id="root"></div></body></html>';
+$ok = file_put_contents(__DIR__ . '/index.html', $html);
+$results['index.html'] = $ok !== false ? "OK ts=$ts" : 'ERROR write';
 
 header('Content-Type: application/json');
-echo json_encode(['status' => 'ok', 'files' => $results, 'time' => date('Y-m-d H:i:s')]);
+echo json_encode(['status'=>'ok','files'=>$results,'time'=>date('Y-m-d H:i:s'),'php'=>phpversion()]);
