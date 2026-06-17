@@ -169,31 +169,31 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
       `&response_type=code&scope=openid`;
     
     await page.goto(kcUrlJSF, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 3000));
     
-    // Verificar si nos pide login de nuevo (por sesión Keycloak activa, puede auto-login)
+    // Verificar si nos pide login de nuevo (selectores reales del SRI: #usuario, #password, #kc-login)
     const jsfLoginHtml = await page.content();
     const jsfLoginUrl = page.url();
     console.log(`    → JSF login URL: ${jsfLoginUrl.substring(0,80)}`);
     
-    if (jsfLoginHtml.includes('id="username"') || jsfLoginHtml.includes('name="username"')) {
-      // Necesita login manual otra vez
+    if (jsfLoginHtml.includes('id="usuario"') || jsfLoginHtml.includes('name="usuario"')) {
+      // Necesita login manual con los selectores exactos del SRI
       console.log(`    → Ingresando credenciales en portal JSF...`);
-      const u2 = await page.$('input[name="username"], #username');
-      const p2 = await page.$('input[type="password"]');
-      const b2 = await page.$('button[type="submit"], #kc-login');
-      if (u2) await u2.type(ruc, { delay: 30 });
-      if (p2) await p2.type(clave, { delay: 30 });
+      const u2 = await page.$('#usuario, input[name="usuario"]');
+      const p2 = await page.$('#password, input[type="password"]');
+      const b2 = await page.$('#kc-login, input[type="submit"]');
+      if (u2) await u2.type(ruc, { delay: 25 });
+      if (p2) await p2.type(clave, { delay: 25 });
       if (b2) {
         await Promise.all([
-          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 40000 }).catch(() => {}),
           b2.click()
         ]);
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 5000));
       }
     } else {
       // Keycloak auto-loggeó via SSO — esperar redirect
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 5000));
     }
     
     const jsfPortalUrl = page.url();
