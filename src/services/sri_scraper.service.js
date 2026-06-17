@@ -164,7 +164,7 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     console.log(`    → Haciendo login en portal JSF clásico del SRI...`);
     // Sin prompt=login para usar la sesión SSO de Keycloak ya establecida
     const kcUrlJSF = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
-      `?client_id=tuportal-internet` +
+      `?client_id=app-tuportal-internet` +
       `&redirect_uri=${encodeURIComponent(BASE_URL + '/tuportal-internet/')}` +
       `&response_type=code&scope=openid`;
     
