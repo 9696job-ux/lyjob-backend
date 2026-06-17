@@ -199,10 +199,34 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const jsfPortalUrl = page.url();
     console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
 
-    // Navegar a Documentos notificados electrónicamente
-    console.log(`    → Navegando a documentos notificados...`);
-    await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 6000)); // JSF necesita tiempo para cargar la tabla
+    // PASO 4: Navegar a notificaciones via sidebar del portal JSF
+    // El portal tiene mostrarOcultarSidebar() que carga el menú via AJAX
+    console.log(`    → Abriendo sidebar del portal JSF para obtener links...`);
+    try {
+      await page.evaluate(() => { if(typeof mostrarOcultarSidebar === 'function') mostrarOcultarSidebar(); });
+      await new Promise(r => setTimeout(r, 4000));
+      const notifLink = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a'));
+        const found = links.find(a => 
+          (a.href && a.href.includes('gestion-documentos')) ||
+          (a.textContent && (a.textContent.toLowerCase().includes('notificad')))
+        );
+        return found ? found.href : null;
+      });
+      console.log(`    → Notif link en sidebar: ${notifLink || 'NO ENCONTRADO'}`);
+      if (notifLink && notifLink.includes('gestion-documentos')) {
+        await page.goto(notifLink, { waitUntil: 'domcontentloaded', timeout: 45000 });
+        await new Promise(r => setTimeout(r, 6000));
+      } else {
+        console.log(`    → Usando NOTIF_URL directo...`);
+        await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await new Promise(r => setTimeout(r, 6000));
+      }
+    } catch(e) {
+      console.log(`    → Sidebar error: ${e.message.substring(0,60)}`);
+      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await new Promise(r => setTimeout(r, 6000));
+    }
 
     // Esperar que cargue la tabla
     try {
