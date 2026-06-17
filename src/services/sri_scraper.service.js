@@ -76,11 +76,13 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     console.log(`    → Esperando form de login...`);
     // Ir directo a la URL de Keycloak que tiene el form HTML estático
     // (el portal SRI es una SPA Angular — no tiene form HTML sin ejecutar JS)
-    // El form del SRI (Keycloak) tiene inputs sin name="username" estándar
-    // Buscar por tipo de input en orden de prioridad
-    const LOGIN_SELECTOR = 'input[name="username"], #username, input[name="identificacion"], input[type="text"]:not([hidden])';
-    const PASS_SELECTOR  = 'input[name="password"], #password, input[name="clave"], input[type="password"]';
-    const BTN_SELECTOR   = 'button[type="submit"], input[type="submit"], #kc-login, button.pf-c-button, button[class*="submit"], button[class*="login"]';
+    // Selectores exactos del form de Keycloak del SRI (verificados via diagnóstico):
+    // - Input RUC: input[name="usuario"] (id="usuario") — NO "username"
+    // - Input Clave: input[name="password"] (id="password")
+    // - Botón Submit: input#kc-login (type="submit")
+    const LOGIN_SELECTOR = '#usuario, input[name="usuario"], input[name="username"], #username';
+    const PASS_SELECTOR  = '#password, input[name="password"], input[type="password"]';
+    const BTN_SELECTOR   = '#kc-login, input[type="submit"], button[type="submit"]';
 
     // URL real que usa el portal SRI (capturada de las network requests del browser)
     // client_id=app-sri-claves-angular (NO app-portal-internet)
