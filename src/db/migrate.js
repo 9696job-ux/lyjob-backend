@@ -224,7 +224,7 @@ const migrations = [
 // ─── TRÁMITES SRI ────────────────────────────────────────────────────────────
 `CREATE TABLE IF NOT EXISTS tramites (
   id                    VARCHAR(36)  PRIMARY KEY DEFAULT (UUID()),
-  numero_tramite        VARCHAR(100) NOT NULL,
+  numero_tramite        VARCHAR(255) NOT NULL,
   cliente_nombre        VARCHAR(255) NOT NULL,
   cliente_ruc           VARCHAR(20)  NOT NULL,
   tipo_tramite          VARCHAR(100),
