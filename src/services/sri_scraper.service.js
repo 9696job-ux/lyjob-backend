@@ -10,7 +10,7 @@ const chromium = chromiumPkg.default || chromiumPkg;
 const BASE_URL  = 'https://srienlinea.sri.gob.ec';
 // URL exacta capturada del browser real del SRI (encoding latin1, & al inicio)
 const NOTIF_URL = `${BASE_URL}/gestion-documentos-internet/pages/materializacion.xhtml` +
-  `?&contextoMPT=${encodeURIComponent(BASE_URL + '/tuportal-internet')}` +
+  `?&contextoMPT=${BASE_URL}/tuportal-internet` +
   `&pathMPT=Tr%E1mites%20y%20Notificaciones%20%2F%20Notificaciones` +
   `&actualMPT=Documentos%20notificados%20electr%F3nicamente%20` +
   `&linkMPT=%2Fgestion-documentos-internet%2Fpages%2Fmaterializacion.xhtml%3F` +
@@ -200,24 +200,58 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const jsfPortalUrl = page.url();
     console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
 
-    // PASO 4: Navegar directamente a NOTIF_URL
-    // El portal JSF de gestion-documentos-internet usa su propio contexto de sesión.
-    // Navegamos con waitUntil:'networkidle0' y tiempo extra para que JSF inicialice.
-    console.log(`    → Navegando a documentos notificados...`);
+    // PASO 4: Navegar a notificaciones usando el menú lateral del portal SRI
+    // Flujo: expandir "Trámites y Notificaciones" → "Notificaciones" → click "Documentos notificados electrónicamente"
+    console.log(`    → Navegando a documentos notificados via menú lateral...`);
     try {
-      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await new Promise(r => setTimeout(r, 8000));
+      // Primero navegar al portal principal del SRI (sri-en-linea) que tiene el menú lateral
+      await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await new Promise(r => setTimeout(r, 4000));
       
-      // Si hay redirección a login, intentar con la URL alternativa sin parámetros decorativos
-      const urlCheck = page.url();
-      if (urlCheck.includes('auth/realms')) {
-        console.log(`    → Redirección a Keycloak, intentando URL simplificada...`);
-        const NOTIF_SIMPLE = `${BASE_URL}/gestion-documentos-internet/pages/materializacion.xhtml`;
-        await page.goto(NOTIF_SIMPLE, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      // Expandir "Trámites y Notificaciones" en el menú izquierdo
+      const tramitesEl = await page.$('a[title="Trámites y Notificaciones"], li a::-p-text("Trámites y Notificaciones"), span::-p-text("TRÁMITES Y NOTIFICACIONES")');
+      if (tramitesEl) {
+        await tramitesEl.click();
+        await new Promise(r => setTimeout(r, 2000));
+      } else {
+        // Buscar por texto
+        await page.evaluate(() => {
+          const els = Array.from(document.querySelectorAll('a, span, li'));
+          const el = els.find(e => e.textContent && e.textContent.toUpperCase().includes('TRÁMITES Y NOTIFICACIONES'));
+          if (el) el.click();
+        });
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      
+      // Expandir "Notificaciones"
+      await page.evaluate(() => {
+        const els = Array.from(document.querySelectorAll('a, span, li'));
+        const el = els.find(e => e.textContent && e.textContent.trim() === 'Notificaciones');
+        if (el) el.click();
+      });
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Hacer clic en "Documentos notificados electrónicamente"
+      const clicked = await page.evaluate(() => {
+        const els = Array.from(document.querySelectorAll('a, span, li'));
+        const el = els.find(e => e.textContent && e.textContent.toLowerCase().includes('documentos notificados electr'));
+        if (el) { el.click(); return true; }
+        return false;
+      });
+      console.log(`    → Clic en Documentos notificados: ${clicked}`);
+      
+      if (clicked) {
+        await new Promise(r => setTimeout(r, 8000));
+      } else {
+        // Fallback: navegar directamente con la URL exacta del SRI
+        console.log(`    → Fallback a NOTIF_URL directa`);
+        await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await new Promise(r => setTimeout(r, 8000));
       }
     } catch(e) {
-      console.log(`    → Error navegando: ${e.message.substring(0,60)}`);
+      console.log(`    → Error menú: ${e.message.substring(0,60)}`);
+      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await new Promise(r => setTimeout(r, 8000));
     }
 
     // Esperar que cargue la tabla
