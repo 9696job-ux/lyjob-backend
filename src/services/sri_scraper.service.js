@@ -200,24 +200,22 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const jsfPortalUrl = page.url();
     console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
 
-    // PASO 4: Flujo real del SRI para acceder a Documentos Notificados Electrónicamente
-    // Cuando el usuario hace clic en ese menú, el portal hace:
-    //   1. accederAplicacion.jspa?redireccion=142&idGrupo=139  → establece sesión JSF
-    //   2. materializacion.xhtml?&contextoMPT=...               → carga la tabla
-    console.log(`    → Accediendo a aplicación de notificaciones (redireccion=142)...`);
-    try {
-      const ACCEDER_URL = `${BASE_URL}/tuportal-internet/accederAplicacion.jspa?redireccion=142&idGrupo=139`;
-      await page.goto(ACCEDER_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await new Promise(r => setTimeout(r, 3000));
-      console.log(`    → accederAplicacion URL: ${page.url().substring(0, 80)}`);
-      
-      console.log(`    → Navegando a documentos notificados...`);
-      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // PASO 4: Navegar a documentos notificados electrónicamente
+    // El SSO con app-tuportal-internet ya estableció el JSESSIONID correcto
+    console.log(`    → Navegando a documentos notificados...`);
+    await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await new Promise(r => setTimeout(r, 8000));
+    
+    // Si redirigió a login, el JSESSIONID no fue suficiente
+    const notifUrl1 = page.url();
+    console.log(`    → URL notif: ${notifUrl1.substring(0, 100)}`);
+    if (notifUrl1.includes('auth/realms')) {
+      // Intentar sin parámetros decorativos - solo la ruta base
+      console.log(`    → Reintentando con URL simplificada...`);
+      const NOTIF_BASE = `${BASE_URL}/gestion-documentos-internet/pages/materializacion.xhtml`;
+      await page.goto(NOTIF_BASE, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await new Promise(r => setTimeout(r, 8000));
-    } catch(e) {
-      console.log(`    → Error: ${e.message.substring(0,60)}, fallback directo...`);
-      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await new Promise(r => setTimeout(r, 8000));
+      console.log(`    → URL base: ${page.url().substring(0,100)}`);
     }
 
     // Esperar que cargue la tabla
