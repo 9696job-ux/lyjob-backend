@@ -200,56 +200,22 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const jsfPortalUrl = page.url();
     console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
 
-    // PASO 4: Navegar a notificaciones usando el menú lateral del portal SRI
-    // Flujo: expandir "Trámites y Notificaciones" → "Notificaciones" → click "Documentos notificados electrónicamente"
-    console.log(`    → Navegando a documentos notificados via menú lateral...`);
+    // PASO 4: Flujo real del SRI para acceder a Documentos Notificados Electrónicamente
+    // Cuando el usuario hace clic en ese menú, el portal hace:
+    //   1. accederAplicacion.jspa?redireccion=142&idGrupo=139  → establece sesión JSF
+    //   2. materializacion.xhtml?&contextoMPT=...               → carga la tabla
+    console.log(`    → Accediendo a aplicación de notificaciones (redireccion=142)...`);
     try {
-      // Primero navegar al portal principal del SRI (sri-en-linea) que tiene el menú lateral
-      await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await new Promise(r => setTimeout(r, 4000));
+      const ACCEDER_URL = `${BASE_URL}/tuportal-internet/accederAplicacion.jspa?redireccion=142&idGrupo=139`;
+      await page.goto(ACCEDER_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await new Promise(r => setTimeout(r, 3000));
+      console.log(`    → accederAplicacion URL: ${page.url().substring(0, 80)}`);
       
-      // Expandir "Trámites y Notificaciones" en el menú izquierdo
-      const tramitesEl = await page.$('a[title="Trámites y Notificaciones"], li a::-p-text("Trámites y Notificaciones"), span::-p-text("TRÁMITES Y NOTIFICACIONES")');
-      if (tramitesEl) {
-        await tramitesEl.click();
-        await new Promise(r => setTimeout(r, 2000));
-      } else {
-        // Buscar por texto
-        await page.evaluate(() => {
-          const els = Array.from(document.querySelectorAll('a, span, li'));
-          const el = els.find(e => e.textContent && e.textContent.toUpperCase().includes('TRÁMITES Y NOTIFICACIONES'));
-          if (el) el.click();
-        });
-        await new Promise(r => setTimeout(r, 2000));
-      }
-      
-      // Expandir "Notificaciones"
-      await page.evaluate(() => {
-        const els = Array.from(document.querySelectorAll('a, span, li'));
-        const el = els.find(e => e.textContent && e.textContent.trim() === 'Notificaciones');
-        if (el) el.click();
-      });
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Hacer clic en "Documentos notificados electrónicamente"
-      const clicked = await page.evaluate(() => {
-        const els = Array.from(document.querySelectorAll('a, span, li'));
-        const el = els.find(e => e.textContent && e.textContent.toLowerCase().includes('documentos notificados electr'));
-        if (el) { el.click(); return true; }
-        return false;
-      });
-      console.log(`    → Clic en Documentos notificados: ${clicked}`);
-      
-      if (clicked) {
-        await new Promise(r => setTimeout(r, 8000));
-      } else {
-        // Fallback: navegar directamente con la URL exacta del SRI
-        console.log(`    → Fallback a NOTIF_URL directa`);
-        await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await new Promise(r => setTimeout(r, 8000));
-      }
+      console.log(`    → Navegando a documentos notificados...`);
+      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await new Promise(r => setTimeout(r, 8000));
     } catch(e) {
-      console.log(`    → Error menú: ${e.message.substring(0,60)}`);
+      console.log(`    → Error: ${e.message.substring(0,60)}, fallback directo...`);
       await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await new Promise(r => setTimeout(r, 8000));
     }
