@@ -199,57 +199,24 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const jsfPortalUrl = page.url();
     console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
 
-    // PASO 4: Hacer clic en el botón hamburger del sidebar para cargar el menú AJAX
-    // Luego buscar y hacer clic en el link de "Documentos notificados"
-    console.log(`    → Abriendo menú sidebar con clic físico...`);
+    // PASO 4: Navegar directamente a NOTIF_URL
+    // El portal JSF de gestion-documentos-internet usa su propio contexto de sesión.
+    // Navegamos con waitUntil:'networkidle0' y tiempo extra para que JSF inicialice.
+    console.log(`    → Navegando a documentos notificados...`);
     try {
-      // Clic físico en el botón hamburguesa del portal JSF
-      const hambBtn = await page.$('a[href="javascript:mostrarOcultarSidebar();"], .hamburgesa-boton-legado, a[class*="hamburgesa"]');
-      if (hambBtn) {
-        await hambBtn.click();
-        console.log(`    → Clic en botón hamburguesa`);
-      } else {
-        // Llamar la función JS directamente
-        await page.evaluate(() => { if(typeof mostrarOcultarSidebar === 'function') mostrarOcultarSidebar(); });
-        console.log(`    → Llamada a mostrarOcultarSidebar()`);
-      }
-      // Esperar que el AJAX del sidebar cargue (puede tardar varios segundos)
-      await new Promise(r => setTimeout(r, 6000));
+      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await new Promise(r => setTimeout(r, 8000));
       
-      // Buscar link de notificaciones en el DOM actualizado
-      const notifLink = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a'));
-        const found = links.find(a => 
-          (a.href && a.href.includes('gestion-documentos')) ||
-          (a.textContent && (a.textContent.toLowerCase().includes('notificad') || 
-                             a.textContent.toLowerCase().includes('tr\u00e1mites')))
-        );
-        return found ? { href: found.href, text: found.textContent.trim().substring(0,50) } : null;
-      });
-      console.log(`    → Link encontrado: ${JSON.stringify(notifLink)}`);
-      
-      if (notifLink && notifLink.href && notifLink.href.includes('gestion-documentos')) {
-        // Clic físico en el link de notificaciones
-        const notifEl = await page.$(`a[href="${notifLink.href}"]`);
-        if (notifEl) {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
-            notifEl.click()
-          ]);
-        } else {
-          await page.goto(notifLink.href, { waitUntil: 'domcontentloaded', timeout: 45000 });
-        }
-        await new Promise(r => setTimeout(r, 6000));
-      } else {
-        // Fallback: NOTIF_URL directo
-        console.log(`    → Fallback: NOTIF_URL directo`);
-        await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await new Promise(r => setTimeout(r, 6000));
+      // Si hay redirección a login, intentar con la URL alternativa sin parámetros decorativos
+      const urlCheck = page.url();
+      if (urlCheck.includes('auth/realms')) {
+        console.log(`    → Redirección a Keycloak, intentando URL simplificada...`);
+        const NOTIF_SIMPLE = `${BASE_URL}/gestion-documentos-internet/pages/materializacion.xhtml`;
+        await page.goto(NOTIF_SIMPLE, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await new Promise(r => setTimeout(r, 8000));
       }
     } catch(e) {
-      console.log(`    → Error sidebar: ${e.message.substring(0,60)}`);
-      await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await new Promise(r => setTimeout(r, 6000));
+      console.log(`    → Error navegando: ${e.message.substring(0,60)}`);
     }
 
     // Esperar que cargue la tabla
