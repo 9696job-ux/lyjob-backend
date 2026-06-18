@@ -8,11 +8,12 @@ const chromiumPkg = require('@sparticuz/chromium');
 const chromium = chromiumPkg.default || chromiumPkg;
 
 const BASE_URL  = 'https://srienlinea.sri.gob.ec';
+// URL exacta capturada del browser real del SRI (encoding latin1, & al inicio)
 const NOTIF_URL = `${BASE_URL}/gestion-documentos-internet/pages/materializacion.xhtml` +
-  `?contextoMPT=${encodeURIComponent(BASE_URL + '/tuportal-internet')}` +
-  `&pathMPT=${encodeURIComponent('Trámites y Notificaciones / Notificaciones')}` +
-  `&actualMPT=${encodeURIComponent('Documentos notificados electrónicamente ')}` +
-  `&linkMPT=${encodeURIComponent('/gestion-documentos-internet/pages/materializacion.xhtml?')}` +
+  `?&contextoMPT=${encodeURIComponent(BASE_URL + '/tuportal-internet')}` +
+  `&pathMPT=Tr%E1mites%20y%20Notificaciones%20%2F%20Notificaciones` +
+  `&actualMPT=Documentos%20notificados%20electr%F3nicamente%20` +
+  `&linkMPT=%2Fgestion-documentos-internet%2Fpages%2Fmaterializacion.xhtml%3F` +
   `&esFavorito=S`;
 
 async function scrapearNotificacionesSRI(ruc, claveBase64) {
