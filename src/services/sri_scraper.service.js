@@ -263,7 +263,12 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     const html = await page.content();
     
     // Verificar sesión: si hay form de login real (no solo el texto del menú del portal)
-    const hayFormLogin = html.includes('<form') && (html.includes('kc-form-login') || html.includes('id="password"'));
+    // Debug detallado de la página de notificaciones
+    const hayFormLogin = html.includes('kc-form-login') || (html.includes('id="password"') && html.includes('id="usuario"'));
+    const notifUrl2 = page.url();
+    console.log(`    → NOTIF page URL: ${notifUrl2.substring(0,100)}`);
+    console.log(`    → HTML size: ${html.length} chars, hasFormLogin: ${hayFormLogin}`);
+    console.log(`    → HTML text: ${html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').substring(0,300)}`);
     if (hayFormLogin) {
       return { ok: false, error: 'Sesión perdida al navegar a notificaciones', superior: [], inferior: [] };
     }
