@@ -218,12 +218,16 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
         await page.goto(notifLink, { waitUntil: 'domcontentloaded', timeout: 45000 });
         await new Promise(r => setTimeout(r, 6000));
       } else {
-        console.log(`    → Usando NOTIF_URL directo...`);
+        console.log(`    → Usando NOTIF_URL directo con Referer...`);
+        const refUrl = page.url();
+        await page.setExtraHTTPHeaders({ 'Referer': refUrl });
         await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await new Promise(r => setTimeout(r, 6000));
       }
     } catch(e) {
       console.log(`    → Sidebar error: ${e.message.substring(0,60)}`);
+      const refUrlFb = page.url();
+      await page.setExtraHTTPHeaders({ 'Referer': refUrlFb });
       await page.goto(NOTIF_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await new Promise(r => setTimeout(r, 6000));
     }
