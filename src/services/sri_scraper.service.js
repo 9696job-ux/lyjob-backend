@@ -155,50 +155,11 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     console.log(`    ✅ Login exitoso`);
 
     // Esperar que el SPA Angular inicialice la sesión completamente
-    console.log(`    → Inicializando sesión en portal SRI...`);
+    // Navegamos al SRI en línea principal para activar la sesión
+    console.log(`    → Inicializando sesión en SRI en línea...`);
     await page.goto(`${BASE_URL}/sri-en-linea/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await new Promise(r => setTimeout(r, 5000));
-
-    // El portal JSF del SRI tiene su propio sistema de login separado del Angular SPA.
-    // Hacemos login también en el portal JSF/clásico usando la misma URL de login de Keycloak
-    // pero con el client_id del portal JSF: tuportal-internet
-    console.log(`    → Haciendo login en portal JSF clásico del SRI...`);
-    // Sin prompt=login para usar la sesión SSO de Keycloak ya establecida
-    const kcUrlJSF = `${BASE_URL}/auth/realms/Internet/protocol/openid-connect/auth` +
-      `?client_id=app-tuportal-internet` +
-      `&redirect_uri=${encodeURIComponent(BASE_URL + '/tuportal-internet/')}` +
-      `&response_type=code&scope=openid`;
-    
-    await page.goto(kcUrlJSF, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000));
-    
-    // Verificar si nos pide login de nuevo (selectores reales del SRI: #usuario, #password, #kc-login)
-    const jsfLoginHtml = await page.content();
-    const jsfLoginUrl = page.url();
-    console.log(`    → JSF login URL: ${jsfLoginUrl.substring(0,80)}`);
-    
-    if (jsfLoginHtml.includes('id="usuario"') || jsfLoginHtml.includes('name="usuario"')) {
-      // Necesita login manual con los selectores exactos del SRI
-      console.log(`    → Ingresando credenciales en portal JSF...`);
-      const u2 = await page.$('#usuario, input[name="usuario"]');
-      const p2 = await page.$('#password, input[type="password"]');
-      const b2 = await page.$('#kc-login, input[type="submit"]');
-      if (u2) await u2.type(ruc, { delay: 25 });
-      if (p2) await p2.type(clave, { delay: 25 });
-      if (b2) {
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 40000 }).catch(() => {}),
-          b2.click()
-        ]);
-        await new Promise(r => setTimeout(r, 5000));
-      }
-    } else {
-      // Keycloak auto-loggeó via SSO — esperar redirect
-      await new Promise(r => setTimeout(r, 5000));
-    }
-    
-    const jsfPortalUrl = page.url();
-    console.log(`    → Portal JSF URL final: ${jsfPortalUrl.substring(0,80)}`);
+    console.log(`    → SRI en linea URL: ${page.url().substring(0,80)}`);
 
     // PASO 4: Navegar a documentos notificados electrónicamente
     // El SSO con app-tuportal-internet ya estableció el JSESSIONID correcto
