@@ -161,6 +161,14 @@ async function scrapearNotificacionesSRI(ruc, claveBase64) {
     await new Promise(r => setTimeout(r, 5000));
     console.log(`    → SRI en linea URL: ${page.url().substring(0,80)}`);
 
+    // PASO 3: accederAplicacion.jspa inicializa la sesion JSF de gestion-documentos
+    // El portal invoca este endpoint cuando el usuario hace clic en el menu Tramites
+    console.log("    -> accederAplicacion.jspa...");
+    const ACCEDER_URL2 = BASE_URL + "/tuportal-internet/accederAplicacion.jspa?redireccion=142&idGrupo=139";
+    await page.goto(ACCEDER_URL2, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await new Promise(r => setTimeout(r, 3000));
+    console.log("    -> acceder: " + page.url().substring(0,100));
+
     // PASO 4: Navegar a documentos notificados electrónicamente
     // El SSO con app-tuportal-internet ya estableció el JSESSIONID correcto
     console.log(`    → Navegando a documentos notificados...`);
