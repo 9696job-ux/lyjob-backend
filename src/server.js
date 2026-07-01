@@ -13,6 +13,7 @@ const entitiesRoutes  = require('./routes/entities.routes');
 const functionsRoutes = require('./routes/functions.routes');
 const adminRoutes     = require('./routes/admin.routes');
 const sriNotifRoutes  = require('./routes/sri_notif.routes');
+const ivaRoutes       = require('./routes/iva.routes');
 const sriNotifSvc    = require('./services/sri_notif.service');
 const { startCronJobs } = require('./services/cron.service');
 
@@ -65,6 +66,7 @@ app.use('/api',           entitiesRoutes);
 app.use('/api/functions', functionsRoutes);
 app.use('/api/admin',     adminRoutes);
 app.use('/api/sri-notif', sriNotifRoutes);
+app.use('/api/iva',       ivaRoutes);
 
 // PayPhone webhook (no auth header needed — uses its own validation)
 app.post('/api/webhook/payphone', (req, res, next) => {

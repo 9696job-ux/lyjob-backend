@@ -10,6 +10,7 @@
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
+    "@base44/sdk": "^0.8.25",
     "@sparticuz/chromium": "^149.0.0",
     "axios": "^1.17.0",
     "axios-cookiejar-support": "^7.0.0",
@@ -28,6 +29,7 @@
     "mysql2": "^3.9.7",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13",
+    "pdfjs-dist": "^4.10.38",
     "puppeteer-core": "^25.1.0",
     "tough-cookie": "^6.0.1",
     "uuid": "^9.0.1"

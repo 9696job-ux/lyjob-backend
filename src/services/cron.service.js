@@ -86,6 +86,39 @@ function startCronJobs() {
     }
   }, { timezone: 'America/Guayaquil' });
 
+  // ─── Cada 5 minutos: procesar declaraciones de IVA pendientes en Base44 ───
+  // (reemplaza la Function `processDeclaration` de Base44, bloqueada en su plan)
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const { listPendingExtractedData, updateExtractedData } = require('./base44_client.service');
+      const { processIvaPdf } = require('./iva_extractor.service');
+      const pending = await listPendingExtractedData(50);
+      if (!Array.isArray(pending) || pending.length === 0) return;
+      console.log(`📄 [CRON-IVA] ${pending.length} declaraciones pendientes, procesando...`);
+      for (const rec of pending) {
+        try {
+          if (!rec.file_url) continue;
+          const result = await processIvaPdf(rec.file_url);
+          if (!result.ok) {
+            await updateExtractedData(rec.id, { status: 'error', observaciones: result.error || 'Error en extracción' });
+          } else {
+            await updateExtractedData(rec.id, {
+              status: 'completed',
+              periodo: result.periodo,
+              extracted_data: result.extracted_data,
+              observaciones: `Tipo: ${result.tipoDeclaracion}. Casilleros con valor: ${result.nonZeroCount}/117.`
+            });
+          }
+        } catch (e) {
+          console.error(`❌ [CRON-IVA] ${rec.id}:`, e.message);
+        }
+      }
+      console.log('✅ [CRON-IVA] Lote completado');
+    } catch (e) {
+      console.error('❌ [CRON-IVA] Error general:', e.message);
+    }
+  });
+
   console.log('✅ Tareas programadas iniciadas');
 }
 
