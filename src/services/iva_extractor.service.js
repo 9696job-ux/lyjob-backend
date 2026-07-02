@@ -6,12 +6,14 @@
  *
  * Base44 entity CRUD via the SDK/api_key still works fine — only their
  * custom serverless "Functions" are blocked on the current plan. So this
- * service reads/writes ExtractedData records directly through Base44's
+ * service reads/writes ExtractedData records directly through14
+ Base44's
  * entities API instead of invoking their function.
  */
 
 const axios = require('axios');
-const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.mjs');
+let _pdfjs=null; // replaced
+async function getPdfjsLib(){let m=await import('pdfjs-dist/legacy/build/pdf.mjs');return m;}
 
 const IVA_CODES = [
   '401', '411', '421', '402', '412', '422', '423', '403', '413', '404', '414',
@@ -93,7 +95,7 @@ function findIvaPeriodo(text) {
 async function extractPdfText(fileUrl) {
   const resp = await axios.get(fileUrl, { responseType: 'arraybuffer', timeout: 30000 });
   const data = new Uint8Array(resp.data);
-  const doc = await pdfjsLib.getDocument({ data, useWorkerFetch: false, isEvalSupported: false }).promise;
+  const doc = await (await getPdfjsLib()).getDocument({ data, useWorkerFetch: false, isEvalSupported: false }).promise;
   let fullText = '';
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
